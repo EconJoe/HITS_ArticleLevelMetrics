@@ -11,7 +11,7 @@ foreach source in `sources' {
 		local elim="title" 
 	}
 	if ("`source'"=="both") {
-		keep filenum pmid version year ngramid vintage age top_* herf_* meshcount_*
+		keep filenum pmid version year ngramid vintage age top_* herf_* meshnum_*
 		duplicates drop
 		* These assignments ensure that the source and elim variables nevery match which means that the 
 		*  hold variables (see below) will not be marked 0.
@@ -19,13 +19,13 @@ foreach source in `sources' {
 		local elim="0"
 	}
 		
-	local metrics `" "herf_raw4" "herf_frac4" "meshcount_raw4" "meshcount_frac4" "'
+	local metrics `" "herf_raw4" "herf_frac4" "meshnum_raw4" "meshnum_frac4" "'
 	foreach metric in `metrics' {
 	
 		local percentiles `" "001" "0001" "'
 		foreach percentile in `percentiles' {
 		
-			local vals 5
+			local vals 10
 			foreach val in `vals' {
 
 				* By setting the hold variable equal to empty (hold==.), the empty variables will not be included
@@ -42,6 +42,6 @@ foreach source in `sources' {
 	}
 }
 
-keep filenum pmid version year herf_* meshcount_*
-drop herf_raw4 herf_frac4 meshcount_raw4 meshcount_frac4
+keep filenum pmid version year herf_* meshnum_*
+drop herf_raw4 herf_frac4 meshnum_raw4 meshnum_frac4
 duplicates drop

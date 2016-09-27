@@ -207,37 +207,37 @@ do topngrams_fowarddispersion.do
 
 cd $outpath
 use ngramsmeshterms4digit_forwarddispersion, clear
-rename meshcount_4digit meshcount_raw4
-rename mesh_4digit_weight meshcount_frac4
+rename meshcount_4digit meshnum_raw4
+rename mesh_4digit_weight meshnum_frac4
 * Treat the n-gram as an "industry" and the 4DIGIT MeSH terms as "firms" within the "industry"
 * Compute the total usage of each n-gram across all 4DIGIT MeSH terms, then compute the proportion for each
 *  4DIGIT MeSH term, and then square this proportion for each 4DIGIT MeSH term.
-by ngramid, sort: egen meshcount_raw_total4=total(meshcount_raw4)
-by ngramid, sort: egen meshcount_frac_total4=total(meshcount_frac4)
-gen herf_raw4=(meshcount_raw4/meshcount_raw_total4)^2
-gen herf_frac4=(meshcount_frac4/meshcount_frac_total4)^2
-drop meshcount_raw_total4 meshcount_frac_total4
+by ngramid, sort: egen meshnum_raw_total4=total(meshnum_raw4)
+by ngramid, sort: egen meshnum_frac_total4=total(meshnum_frac4)
+gen herf_raw4=(meshnum_raw4/meshnum_raw_total4)^2
+gen herf_frac4=(meshnum_frac4/meshnum_frac_total4)^2
+drop meshnum_raw_total4 meshnum_frac_total4
 * Compute the Herfinahl index and total number of 4DIGIT MeSH terms used by each n-gram (industry)
 * These are measures of concentration/dispersion.
-collapse (sum) herf_* meshcount_*, by(ngramid) fast
+collapse (sum) herf_* meshnum_*, by(ngramid) fast
 tempfile hold
 save `hold', replace
 
 cd $outpath
 use ngramsmeshtermsraw_forwarddispersion, clear
-rename meshcount meshcount_raw
-rename meshweight meshcount_frac
+rename meshcount meshnum_raw
+rename meshweight meshnum_frac
 * Treat the n-gram as an "industry" and the RAW MeSH terms as "firms" within the "industry"
 * Compute the total usage of each n-gram across all RAW MeSH terms, then compute the proportion for each
 *  RAW MeSH term, and then square this proportion for each RAW MeSH term.
-by ngramid, sort: egen meshcount_raw_total=total(meshcount_raw)
-by ngramid, sort: egen meshcount_frac_total=total(meshcount_frac)
-gen herf_raw=(meshcount_raw/meshcount_raw_total)^2
-gen herf_frac=(meshcount_frac/meshcount_frac_total)^2
-drop meshcount_raw_total meshcount_frac_total
+by ngramid, sort: egen meshnum_raw_total=total(meshnum_raw)
+by ngramid, sort: egen meshnum_frac_total=total(meshnum_frac)
+gen herf_raw=(meshnum_raw/meshnum_raw_total)^2
+gen herf_frac=(meshnum_frac/meshnum_frac_total)^2
+drop meshnum_raw_total meshnum_frac_total
 * Compute the Herfinahl index and total number of RAW MeSH terms used by each n-gram (industry)
 * These are measures of concentration/dispersion.
-collapse (sum) herf_* meshcount_*, by(ngramid) fast
+collapse (sum) herf_* meshnum_*, by(ngramid) fast
 merge 1:1 ngramid using `hold'
 * Unfortunately there is a one n-gram that has metrics when computed using raw MeSH terms but not when
 *  computed using the 4DIGIT MeSH terms. ID=44561190, NAME="flerovium", VINTAGE="2013". We just drop.
@@ -277,7 +277,7 @@ foreach h in `initialfiles' {
 	merge m:1 ngramid using ngrams_fowarddispersion
 	drop if _merge==2
 	drop _merge
-	drop herf_raw herf_frac meshcount_raw meshcount_frac
+	drop herf_raw herf_frac meshnum_raw meshnum_frac
 
 	* Compute the dispersion metrics for articles.
 	cd $code
