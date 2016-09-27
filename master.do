@@ -11,11 +11,11 @@ global meshtree "B:\Research\RAWDATA\MeSH\2014\Parsed"
 *************************************************************************************
 *************************************************************************************
 * Construct a set of files that contain each PMID along with a list of all n-grams
-*  used in the title or abstract. This files will be used multipel times to construct
+*  used in the title or abstract. These files will be used multiple times to construct
 *  various article-level metrics. However, they are merely intermediate files, and
-*  do not need to be retained after all metrics are computed. They are created in the first
-*  place because they take a while and it would be inefficient to recreate them each time
-*  we wanted to compute a new metric.
+*  do not need to be retained after all metrics are computed. They are created
+*  because they take a while to construct and it would be inefficient to recreate them
+*  each time we wanted to compute a new metric.
 
 * Create a file that contains information for every n-gram in the MEDLINE corpus.
 *  Mainly we want to create a set of files with the ngram replaced with an n-gram ID
@@ -39,6 +39,8 @@ cd $outpath
 save ngram_temp, replace
 
 * Create the imported and cleaned files in increments of 50 underlying MEDLINE files.
+* This will allow us to compute each metric looping over 15 large files instead of 746
+*   smaller files. This saves a great deal of time.
 local initialfiles 1 51 101 151 201 251 301 351 401 451 501 551 601 651 701
 local terminalfile=746
 local fileinc=49
@@ -47,6 +49,7 @@ clear
 set more off
 foreach h in `initialfiles' {
 
+	* These lines just set the file numbers that we use at each iteration.
 	local startfile=`h'
 	local endfile=`startfile'+`fileinc'
 	if (`endfile'>`terminalfile') {
@@ -107,6 +110,7 @@ foreach h in `initialfiles' {
 	cd $outpath\ImportandClean
 	save importandclean_`startfile'_`endfile', replace
 }
+* erase ngram_temp.dta
 *********************************************************************************
 
 
@@ -127,7 +131,8 @@ local fileinc=49
 clear
 set more off
 foreach h in `initialfiles' {
-
+	
+	* These lines just set the file numbers that we use at each iteration.
 	local startfile=`h'
 	local endfile=`startfile'+`fileinc'
 	if (`endfile'>`terminalfile') {
@@ -136,7 +141,7 @@ foreach h in `initialfiles' {
 	
 	cd $outpath\ImportandClean
 	use importandclean_`startfile'_`endfile', clear
-	* Compute the age and vintage metrics using the dofile metrics_articlelevel_ngramagevintage.do.
+	* Compute the mentions metrics.
 	cd $code
 	do metrics_mentions_quick.do
 	
@@ -153,6 +158,9 @@ foreach h in `initialfiles' {
 
 *************************************************************************************
 *************************************************************************************
+* Compute article-level age/vintage metrics. Specifically, compute the age and the vintage of
+*  ALL concepts (not just top concepts) that an article uses.
+
 clear
 gen filenum=.
 cd $outpath
@@ -166,6 +174,7 @@ clear
 set more off
 foreach h in `initialfiles' {
 
+	* These lines just set the file numbers that we use at each iteration.
 	local startfile=`h'
 	local endfile=`startfile'+`fileinc'
 	if (`endfile'>`terminalfile') {
@@ -191,7 +200,8 @@ foreach h in `initialfiles' {
 *************************************************************************************
 *************************************************************************************
 * Compute the forward dispersion (Herfindahls and MeSH counts) for each top n-gram.
-*  This file will serve as an input for article-level dispersion metrics.
+*  This file will serve as an input for article-level dispersion metrics. We could,
+*  in principle, compute this for every n-gram, but it takes a very long time.
 cd $code
 do topngrams_fowarddispersion.do
 
@@ -199,12 +209,17 @@ cd $outpath
 use ngramsmeshterms4digit_forwarddispersion, clear
 rename meshcount_4digit meshcount_raw4
 rename mesh_4digit_weight meshcount_frac4
+* Treat the n-gram as an "industry" and the 4DIGIT MeSH terms as "firms" within the "industry"
+* Compute the total usage of each n-gram across all 4DIGIT MeSH terms, then compute the proportion for each
+*  4DIGIT MeSH term, and then square this proportion for each 4DIGIT MeSH term.
 by ngramid, sort: egen meshcount_raw_total4=total(meshcount_raw4)
 by ngramid, sort: egen meshcount_frac_total4=total(meshcount_frac4)
 gen herf_raw4=(meshcount_raw4/meshcount_raw_total4)^2
 gen herf_frac4=(meshcount_frac4/meshcount_frac_total4)^2
 drop meshcount_raw_total4 meshcount_frac_total4
-collapse (sum) herf_* meshcount_*, by(ngramid)
+* Compute the Herfinahl index and total number of 4DIGIT MeSH terms used by each n-gram (industry)
+* These are measures of concentration/dispersion.
+collapse (sum) herf_* meshcount_*, by(ngramid) fast
 tempfile hold
 save `hold', replace
 
@@ -212,13 +227,20 @@ cd $outpath
 use ngramsmeshtermsraw_forwarddispersion, clear
 rename meshcount meshcount_raw
 rename meshweight meshcount_frac
+* Treat the n-gram as an "industry" and the RAW MeSH terms as "firms" within the "industry"
+* Compute the total usage of each n-gram across all RAW MeSH terms, then compute the proportion for each
+*  RAW MeSH term, and then square this proportion for each RAW MeSH term.
 by ngramid, sort: egen meshcount_raw_total=total(meshcount_raw)
 by ngramid, sort: egen meshcount_frac_total=total(meshcount_frac)
 gen herf_raw=(meshcount_raw/meshcount_raw_total)^2
 gen herf_frac=(meshcount_frac/meshcount_frac_total)^2
 drop meshcount_raw_total meshcount_frac_total
-collapse (sum) herf_* meshcount_*, by(ngramid)
+* Compute the Herfinahl index and total number of RAW MeSH terms used by each n-gram (industry)
+* These are measures of concentration/dispersion.
+collapse (sum) herf_* meshcount_*, by(ngramid) fast
 merge 1:1 ngramid using `hold'
+* Unfortunately there is a one n-gram that has metrics when computed using raw MeSH terms but not when
+*  computed using the 4DIGIT MeSH terms. ID=44561190, NAME="flerovium", VINTAGE="2013". We just drop.
 drop if _merge==1
 drop _merge
 
@@ -241,6 +263,7 @@ clear
 set more off
 foreach h in `initialfiles' {
 
+	* These lines just set the file numbers that we use at each iteration.
 	local startfile=`h'
 	local endfile=`startfile'+`fileinc'
 	if (`endfile'>`terminalfile') {
@@ -256,7 +279,7 @@ foreach h in `initialfiles' {
 	drop _merge
 	drop herf_raw herf_frac meshcount_raw meshcount_frac
 
-	* Compute the age and vintage metrics using the dofile metrics_articlelevel_ngramagevintage.do.
+	* Compute the dispersion metrics for articles.
 	cd $code
 	do metrics_dispersion_quick.do
 	
@@ -270,6 +293,10 @@ foreach h in `initialfiles' {
 *************************************************************************************
 
 
+*************************************************************************************
+*************************************************************************************
+* Combine and export all data
+
 cd $outpath
 use metrics_articlelevel_ngramagevintage, clear
 merge 1:1 filenum pmid version year using metrics_articlelevel_mentions
@@ -280,7 +307,7 @@ sort filenum pmid version
 compress
 save metrics_articlelevel, replace
 export delimited using "metrics_articlelevel", replace
-
+*************************************************************************************
 
 
 
