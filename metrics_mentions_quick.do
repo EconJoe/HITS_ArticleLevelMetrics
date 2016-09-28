@@ -23,7 +23,7 @@ foreach source in `sources' {
 	foreach percentile in `percentiles' {
 			
 		* Compute mentions within *`i'* years of the vintage
-		local vals 5
+		local vals 10
 		foreach j in `vals' {
 			gen hold=top_`percentile'
 			* Set the hold variable to 0 if the article is beyond `j' years past vintage OR it is in the wrong source.
