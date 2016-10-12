@@ -19,7 +19,7 @@ foreach source in `sources' {
 		local elim="0"
 	}
 		
-	local metrics `" "herf" "meshcount" "'
+	local metrics `" "herf_raw4" "herf_frac4" "meshnum_raw4" "meshnum_frac4" "'
 	foreach metric in `metrics' {
 	
 		local percentiles `" "001" "0001" "'
@@ -30,18 +30,16 @@ foreach source in `sources' {
 
 				* By setting the hold variable equal to empty (hold==.), the empty variables will not be included
 				*   in the egen calculations.
-				gen hold=`metric'_`val'
-				replace hold=. if source=="`elim'" | top_`percentile'==0
-				local moments `" "min" "max" "mean" "median" "'
-				foreach moment in `moments' {
-					by pmid version, sort: egen `metric'_`val'_`source'_`percentile'_`moment'=`moment'(hold)
-				}
+				gen hold=`metric'
+				replace hold=. if year>vintage+`val' | source=="`elim'" | top_`percentile'==0
+				by pmid version, sort: egen `metric'_`val'_`source'_`percentile'_mean=mean(hold)
 				drop hold
 			}
 		}
 	}
 }
 
-keep filenum pmid version year herf_* meshcount_*
-drop herf_0 herf_3 herf_5 herf_10 herf_20 meshcount_0 meshcount_3 meshcount_5 meshcount_10 meshcount_20
+keep filenum pmid version year herf_* meshnum_*
+drop herf_raw4 herf_frac4 meshnum_raw4 meshnum_frac4
 duplicates drop
+
