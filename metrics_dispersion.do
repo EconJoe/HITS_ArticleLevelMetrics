@@ -11,7 +11,7 @@ foreach source in `sources' {
 		local elim="title" 
 	}
 	if ("`source'"=="both") {
-		keep filenum pmid version year ngramid vintage age top_* herf_* meshcount_*
+		keep filenum pmid version year ngramid vintage age top_* herf_* meshnum_*
 		duplicates drop
 		* These assignments ensure that the source and elim variables nevery match which means that the 
 		*  hold variables (see below) will not be marked 0.
